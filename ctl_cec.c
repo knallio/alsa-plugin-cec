@@ -132,286 +132,79 @@ static const struct {
 
 typedef struct snd_ctl_cec {
 	snd_ctl_ext_t		ext;
-	int			port_fd;
-	int			shm_id;
-	const char*		port;
-	pthread_t		server;
+//	int			port_fd;
+//	int			shm_id;
+//	const char*		port;
+//	pthread_t		server;
 } snd_ctl_cec_t;
 
-/*
-static void arcam_av_close(snd_ctl_ext_t *ext)
+static void cec_close(snd_ctl_ext_t *ext)
 {
-	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
+	snd_ctl_cec_t *cec = ext->private_data;
 
-	if (arcam_av->port_fd >= 0)
-		close(arcam_av->port_fd);
+	//close file
+	//if (cec->port_fd >= 0)
+	//	close(cec->port_fd);
 
-	if (arcam_av->global)
-		arcam_av_state_detach(arcam_av->global);
-
-	if (arcam_av->ext.poll_fd >= 0) {
-		close(arcam_av->ext.poll_fd);
-		arcam_av_server_stop(arcam_av->server, arcam_av->port);
-	}
-
-	free(arcam_av);
+	free(cec);
 }
-*/
 static int cec_elem_count(snd_ctl_ext_t *ext)
 {
 	//snd_ctl_cec_t *cec = ext->private_data;
 
 	//return ARRAY_SIZE(arcam_av_zone1);
 
-
-	return 0;
+	//Nur Volume geplant:
+	return 1;
 }
 
 static int cec_elem_list(snd_ctl_ext_t *ext, unsigned int offset, snd_ctl_elem_id_t *id)
 {
-	//snd_ctl_cec_t *cec = ext->private_data;
+//	snd_ctl_cec_t *cec = ext->private_data;
 
-	//snd_ctl_elem_id_set_interface(id, SND_CTL_ELEM_IFACE_MIXER);
+	snd_ctl_elem_id_set_interface(id, SND_CTL_ELEM_IFACE_MIXER);
 
-//	if (offset < ARRAY_SIZE(arcam_av_zone1))
-//		snd_ctl_elem_id_set_name(id, arcam_av_zone1[offset].name);
+	if (offset < 1)
+		snd_ctl_elem_id_set_name(id, "VOLUME");
 	return 0;
 }
 
-/*
-
-static snd_ctl_ext_key_t arcam_av_find_elem(snd_ctl_ext_t *ext,
+static snd_ctl_ext_key_t cec_find_elem(snd_ctl_ext_t *ext,
 					    const snd_ctl_elem_id_t *id)
 {
-	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
-	unsigned int numid, search;
-	const char *name;
+//	snd_ctl_cec_t *cec = ext->private_data;
+	unsigned int numid;
 
 	numid = snd_ctl_elem_id_get_numid(id);
 	if (numid > 0) {
-		numid--;
-
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			if (numid < ARRAY_SIZE(arcam_av_zone1))
-				return arcam_av_zone1[numid].code;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			if (numid < ARRAY_SIZE(arcam_av_zone2))
-				return arcam_av_zone2[numid].code;
-			break;
-		}
+		return 0;
 	}
 
-	name = snd_ctl_elem_id_get_name(id);
-	switch(arcam_av->zone) {
-	case ARCAM_AV_ZONE1:
-		for (search = 0; search < ARRAY_SIZE(arcam_av_zone1); search++)
-			if (!strcmp(name, arcam_av_zone1[search].name))
-				return arcam_av_zone1[search].code;
-		break;
-
-	case ARCAM_AV_ZONE2:
-		for (search = 0; search < ARRAY_SIZE(arcam_av_zone2); search++)
-			if (!strcmp(name, arcam_av_zone2[search].name))
-				return arcam_av_zone2[search].code;
-		break;
-	}
 
 	return SND_CTL_EXT_KEY_NOT_FOUND;
 }
 
-static int arcam_av_get_attribute(snd_ctl_ext_t *ext ATTRIBUTE_UNUSED,
+static int cec_get_attribute(snd_ctl_ext_t *ext ATTRIBUTE_UNUSED,
 				  snd_ctl_ext_key_t key, int *type,
 				  unsigned int *acc, unsigned int *count)
 {
-	switch(key) {
-	case ARCAM_AV_POWER:
-		*type = SND_CTL_ELEM_TYPE_BOOLEAN;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_VOLUME_SET:
-		*type = SND_CTL_ELEM_TYPE_INTEGER;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_MUTE:
-		*type = SND_CTL_ELEM_TYPE_BOOLEAN;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_DIRECT:
-		*type = SND_CTL_ELEM_TYPE_ENUMERATED;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_SOURCE:
-		*type = SND_CTL_ELEM_TYPE_ENUMERATED;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_SOURCE_TYPE:
-		*type = SND_CTL_ELEM_TYPE_ENUMERATED;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_STEREO_DECODE:
-		*type = SND_CTL_ELEM_TYPE_ENUMERATED;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_MULTI_DECODE:
-		*type = SND_CTL_ELEM_TYPE_ENUMERATED;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	case ARCAM_AV_STEREO_EFFECT:
-		*type = SND_CTL_ELEM_TYPE_ENUMERATED;
-		*acc = SND_CTL_EXT_ACCESS_READWRITE;
-		*count = 1;
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
+	*type = SND_CTL_ELEM_TYPE_INTEGER;
+	*acc = SND_CTL_EXT_ACCESS_READWRITE;
+	*count = 1;
 	return 0;
 }
 
-static int arcam_av_get_integer_info(snd_ctl_ext_t *ext,
+static int cec_get_integer_info(snd_ctl_ext_t *ext,
 				     snd_ctl_ext_key_t key,
 				     long *imin, long *imax, long *istep)
 {
-	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
-
-	switch(key) {
-	case ARCAM_AV_VOLUME_SET:
-		*istep = 1;
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			*imin = 0;
-			*imax = 100;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			*imin = 20;
-			*imax = 83;
-			break;
-		}
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
+	*istep = 1;
+	*imin = 0;
+	*imax = 100;
 	return 0;
 }
 
-static int arcam_av_get_enumerated_info(snd_ctl_ext_t *ext ATTRIBUTE_UNUSED,
-					snd_ctl_ext_key_t key,
-					unsigned int *items)
-{
-	switch(key) {
-	case ARCAM_AV_SOURCE:
-		*items = ARRAY_SIZE(arcam_av_sources);
-		break;
-
-	case ARCAM_AV_SOURCE_TYPE:
-		*items = ARRAY_SIZE(arcam_av_source_types);
-		break;
-
-	case ARCAM_AV_DIRECT:
-		*items = ARRAY_SIZE(arcam_av_direct);
-		break;
-
-	case ARCAM_AV_STEREO_DECODE:
-		*items = ARRAY_SIZE(arcam_av_stereo_decode_modes);
-		break;
-
-	case ARCAM_AV_MULTI_DECODE:
-		*items = ARRAY_SIZE(arcam_av_multi_decode_modes);
-		break;
-
-	case ARCAM_AV_STEREO_EFFECT:
-		*items = ARRAY_SIZE(arcam_av_stereo_effects);
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int arcam_av_get_enumerated_name(snd_ctl_ext_t *ext ATTRIBUTE_UNUSED,
-					snd_ctl_ext_key_t key,
-					unsigned int item, char *name,
-					size_t name_max_len)
-{
-	const char* label;
-
-	switch(key) {
-	case ARCAM_AV_SOURCE:
-		if (item >= ARRAY_SIZE(arcam_av_sources))
-			return -EINVAL;
-
-		label = arcam_av_sources[item].name;
-		break;
-
-	case ARCAM_AV_SOURCE_TYPE:
-		if (item >= ARRAY_SIZE(arcam_av_source_types))
-			return -EINVAL;
-
-		label = arcam_av_source_types[item].name;
-		break;
-
-	case ARCAM_AV_DIRECT:
-		if (item >= ARRAY_SIZE(arcam_av_direct))
-			return -EINVAL;
-
-		label = arcam_av_direct[item].name;
-		break;
-
-	case ARCAM_AV_STEREO_DECODE:
-		if (item >= ARRAY_SIZE(arcam_av_stereo_decode_modes))
-			return -EINVAL;
-
-		label = arcam_av_stereo_decode_modes[item].name;
-		break;
-
-	case ARCAM_AV_MULTI_DECODE:
-		if (item >= ARRAY_SIZE(arcam_av_multi_decode_modes))
-			return -EINVAL;
-
-		label = arcam_av_multi_decode_modes[item].name;
-		break;
-
-	case ARCAM_AV_STEREO_EFFECT:
-		if (item >= ARRAY_SIZE(arcam_av_stereo_effects))
-			return -EINVAL;
-
-		label = arcam_av_stereo_effects[item].name;
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	strncpy(name, label, name_max_len - 1);
-	name[name_max_len - 1] = '\0';
-
-	return 0;
-}
+/*
 
 static int arcam_av_read_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long *value)
 {
@@ -457,130 +250,6 @@ static int arcam_av_read_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long
 			arcam_av->local.zone2.mute = arcam_av->global->zone2.mute;
 			*value = !(arcam_av->local.zone2.mute == ARCAM_AV_MUTE_ON);
 			break;
-		}
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int arcam_av_read_enumerated(snd_ctl_ext_t *ext,
-				    snd_ctl_ext_key_t key,
-				    unsigned int *item)
-{
-	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
-	unsigned int i;
-
-	switch(key) {
-	case ARCAM_AV_SOURCE:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.source = arcam_av->global->zone1.source;
-			for (i = 0; i < ARRAY_SIZE(arcam_av_sources); ++i) {
-				if (arcam_av_sources[i].code == arcam_av->local.zone1.source) {
-					*item = i;
-					break;
-				}
-			}
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.source = arcam_av->global->zone2.source;
-			for (i = 0; i < ARRAY_SIZE(arcam_av_sources); ++i) {
-				if (arcam_av_sources[i].code == arcam_av->local.zone2.source) {
-					*item = i;
-					break;
-				}
-			}
-			break;
-		}
-		break;
-
-	case ARCAM_AV_SOURCE_TYPE:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.source_type = arcam_av->global->zone1.source_type;
-			for (i = 0; i < ARRAY_SIZE(arcam_av_source_types); ++i) {
-				if (arcam_av_source_types[i].code == arcam_av->local.zone1.source_type) {
-					*item = i;
-					break;
-				}
-			}
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_DIRECT:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.direct = arcam_av->global->zone1.direct;
-			for (i = 0; i < ARRAY_SIZE(arcam_av_direct); ++i) {
-				if (arcam_av_direct[i].code == arcam_av->local.zone1.direct) {
-					*item = i;
-					break;
-				}
-			}
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_STEREO_DECODE:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.stereo_decode = arcam_av->global->zone1.stereo_decode;
-			for (i = 0; i < ARRAY_SIZE(arcam_av_stereo_decode_modes); ++i) {
-				if (arcam_av_stereo_decode_modes[i].code == arcam_av->local.zone1.stereo_decode) {
-					*item = i;
-					break;
-				}
-			}
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_STEREO_EFFECT:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.stereo_effect = arcam_av->global->zone1.stereo_effect;
-			for (i = 0; i < ARRAY_SIZE(arcam_av_stereo_effects); ++i) {
-				if (arcam_av_stereo_effects[i].code == arcam_av->local.zone1.stereo_effect) {
-					*item = i;
-					break;
-				}
-			}
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_MULTI_DECODE:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.multi_decode = arcam_av->global->zone1.multi_decode;
-			for (i = 0; i < ARRAY_SIZE(arcam_av_multi_decode_modes); ++i) {
-				if (arcam_av_multi_decode_modes[i].code == arcam_av->local.zone1.multi_decode) {
-					*item = i;
-					break;
-				}
-			}
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
 		}
 		break;
 
@@ -672,134 +341,6 @@ static int arcam_av_write_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, lon
 		return -1;
 }
 
-static int arcam_av_write_enumerated(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, unsigned int *item)
-{
-	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
-	unsigned char code;
-
-	switch(key) {
-	case ARCAM_AV_SOURCE:
-		if (*item >= ARRAY_SIZE(arcam_av_sources))
-			return -EINVAL;
-
-		code = arcam_av_sources[*item].code;
-
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.source = code;
-			if (arcam_av->global->zone1.source == code)
-				return 0;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.source = code;
-			if (arcam_av->global->zone2.source == code)
-				return 0;
-			break;
-		}
-		break;
-
-	case ARCAM_AV_SOURCE_TYPE:
-		if (*item >= ARRAY_SIZE(arcam_av_source_types))
-			return -EINVAL;
-
-		code = arcam_av_source_types[*item].code;
-
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.source_type = code;
-			if (arcam_av->global->zone1.source_type == code)
-				return 0;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_DIRECT:
-		if (*item >= ARRAY_SIZE(arcam_av_direct))
-			return -EINVAL;
-
-		code = arcam_av_direct[*item].code;
-
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.direct = code;
-			if (arcam_av->global->zone1.direct == code)
-				return 0;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_STEREO_DECODE:
-		if (*item >= ARRAY_SIZE(arcam_av_stereo_decode_modes))
-			return -EINVAL;
-
-		code = arcam_av_stereo_decode_modes[*item].code;
-
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.stereo_decode = code;
-			if (arcam_av->global->zone1.stereo_decode == code)
-				return 0;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_STEREO_EFFECT:
-		if (*item >= ARRAY_SIZE(arcam_av_stereo_effects))
-			return -EINVAL;
-
-		code = arcam_av_stereo_effects[*item].code;
-
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.stereo_effect = code;
-			if (arcam_av->global->zone1.stereo_effect == code)
-				return 0;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	case ARCAM_AV_MULTI_DECODE:
-		if (*item >= ARRAY_SIZE(arcam_av_multi_decode_modes))
-			return -EINVAL;
-
-		code = arcam_av_multi_decode_modes[*item].code;
-
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.multi_decode = code;
-			if (arcam_av->global->zone1.multi_decode == code)
-				return 0;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			return -EINVAL;
-		}
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	if (!arcam_av_send(arcam_av->port_fd, key, arcam_av->zone, code))
-		return 1;
-	else
-		return -1;
-}
-
-
 static int arcam_av_read_event(snd_ctl_ext_t *ext, snd_ctl_elem_id_t *id, unsigned int *event_mask)
 {
 	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
@@ -856,9 +397,9 @@ static snd_ctl_ext_callback_t cec_ext_callback = {
 //	.close = arcam_av_close,
 	.elem_count = cec_elem_count,
 	.elem_list = cec_elem_list,
-//	.find_elem = arcam_av_find_elem,
-//	.get_attribute = arcam_av_get_attribute,
-//	.get_integer_info = arcam_av_get_integer_info,
+	.find_elem = cec_find_elem,
+	.get_attribute = cec_get_attribute,
+	.get_integer_info = cec_get_integer_info,
 //	.get_enumerated_info = arcam_av_get_enumerated_info,
 //	.get_enumerated_name = arcam_av_get_enumerated_name,
 //	.read_integer = arcam_av_read_integer,
@@ -943,14 +484,14 @@ SND_CTL_PLUGIN_DEFINE_FUNC(cec)
 		err = -errno;
 		goto error;
 	}
+*/
 
-	err = snd_ctl_ext_create(&arcam_av->ext, name, mode);
+	err = snd_ctl_ext_create(&cec->ext, name, mode);
 	if (err < 0)
 		goto error;
 
-	*handlep = arcam_av->ext.handle;
+	*handlep = cec->ext.handle;
 	return 0;
-*/
 
  error:
 	perror("cec()");
