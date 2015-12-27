@@ -1,7 +1,7 @@
 /*
  * ALSA -> CEC control plugin
  *
- * Copyright (c) 2009 by Peter Stokes <linux@dadeos.co.uk>
+ * Copyright (c) 2015 by Winfried Lorenzen <knallio@gmx.de>
  *
  * This library is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -32,103 +32,6 @@
 */
 
 static const char* cec_name =		"CEC";
-
-/*
-static const struct {
-	arcam_av_cc_t			code;
-	const char*			name;
-} arcam_av_zone1[] = {
-	{ARCAM_AV_POWER,			"Power Switch"				},
-	{ARCAM_AV_VOLUME_SET,			"Master Playback Volume"		},
-	{ARCAM_AV_MUTE,				"Master Playback Switch"		},
-	{ARCAM_AV_DIRECT,			"Direct Playback Switch"		},
-	{ARCAM_AV_SOURCE,			"Source Playback Route"			},
-	{ARCAM_AV_SOURCE_TYPE,			"Source Type Playback Route"		},
-	{ARCAM_AV_STEREO_DECODE,		"Stereo Decode Playback Route"		},
-	{ARCAM_AV_MULTI_DECODE,			"Multi-Channel Decode Playback Route"	},
-	{ARCAM_AV_STEREO_EFFECT,		"Stereo Effect Playback Route"		}
-};
-
-static const struct {
-	arcam_av_cc_t			code;
-	const char*			name;
-} arcam_av_zone2[] = {
-	{ARCAM_AV_POWER,			"Power Switch"				},
-	{ARCAM_AV_VOLUME_SET,			"Master Playback Volume"		},
-	{ARCAM_AV_MUTE,				"Master Playback Switch"		},
-	{ARCAM_AV_SOURCE,			"Source Playback Route"			}
-};
-
-static const struct {
-	arcam_av_source_t		code;
-	const char*			name;
-} arcam_av_sources[] = {
-	{ARCAM_AV_SOURCE_DVD,			"DVD"			},
-	{ARCAM_AV_SOURCE_SAT,			"SAT"			},
-	{ARCAM_AV_SOURCE_AV,			"AV"			},
-	{ARCAM_AV_SOURCE_PVR,			"PVR"			},
-	{ARCAM_AV_SOURCE_VCR,			"VCR"			},
-	{ARCAM_AV_SOURCE_CD,			"CD"			},
-	{ARCAM_AV_SOURCE_FM,			"FM"			},
-	{ARCAM_AV_SOURCE_AM,			"AM"			},
-	{ARCAM_AV_SOURCE_DVDA,			"DVDA"			}
-};
-
-static const struct {
-	arcam_av_source_type_t		code;
-	const char*			name;
-} arcam_av_source_types[] = {
-	{ARCAM_AV_SOURCE_TYPE_ANALOGUE,		"Analogue"		},
-	{ARCAM_AV_SOURCE_TYPE_DIGITAL,		"Digital"		}
-};
-
-static const struct {
-	arcam_av_direct_t		code;
-	const char*			name;
-} arcam_av_direct[] = {
-	{ARCAM_AV_DIRECT_DISABLE,		"Disable"		},
-	{ARCAM_AV_DIRECT_ENABLE,		"Enable"		}
-};
-
-static const struct {
-	arcam_av_stereo_decode_t	code;
-	const char*			name;
-} arcam_av_stereo_decode_modes[] = {
-	{ARCAM_AV_STEREO_DECODE_MONO,		"Mono"			},
-	{ARCAM_AV_STEREO_DECODE_STEREO,		"Stereo"		},
-	{ARCAM_AV_STEREO_DECODE_PLII_MOVIE,	"Pro Logic II Movie"	},
-	{ARCAM_AV_STEREO_DECODE_PLII_MUSIC,	"Pro Logic II Music"	},
-	{ARCAM_AV_STEREO_DECODE_PLIIx_MOVIE,	"Pro Logic IIx Movie"	},
-	{ARCAM_AV_STEREO_DECODE_PLIIx_MUSIC,	"Pro Logic IIx Music"	},
-	{ARCAM_AV_STEREO_DECODE_DOLBY_PL,	"Dolby Pro Logic"	},
-	{ARCAM_AV_STEREO_DECODE_NEO6_CINEMA,	"Neo:6 Cinema"		},
-	{ARCAM_AV_STEREO_DECODE_NEO6_MUSIC,	"Neo:6 Music"		}
-};
-
-static const struct {
-	arcam_av_multi_decode_t		code;
-	const char*			name;
-} arcam_av_multi_decode_modes[] = {
-	{ARCAM_AV_MULTI_DECODE_MONO,		"Mono down-mix"		},
-	{ARCAM_AV_MULTI_DECODE_STEREO,		"Stereo down-mix"	},
-	{ARCAM_AV_MULTI_DECODE_MULTI_CHANNEL,	"Multi-channel"		},
-	{ARCAM_AV_MULTI_DECODE_PLIIx,		"Pro Logic IIx"		}
-};
-
-static const struct {
-	arcam_av_stereo_effect_t	code;
-	const char*			name;
-} arcam_av_stereo_effects[] = {
-	{ARCAM_AV_STEREO_EFFECT_NONE,		"None"			},
-	{ARCAM_AV_STEREO_EFFECT_MUSIC,		"Music"			},
-	{ARCAM_AV_STEREO_EFFECT_PARTY,		"Party"			},
-	{ARCAM_AV_STEREO_EFFECT_CLUB,		"Club"			},
-	{ARCAM_AV_STEREO_EFFECT_HALL,		"Hall"			},
-	{ARCAM_AV_STEREO_EFFECT_SPORTS,		"Sports"		},
-	{ARCAM_AV_STEREO_EFFECT_CHURCH,		"Church"		}
-};
-
-*/
 
 typedef struct snd_ctl_cec {
 	snd_ctl_ext_t		ext;
@@ -204,143 +107,36 @@ static int cec_get_integer_info(snd_ctl_ext_t *ext,
 	return 0;
 }
 
-/*
-
-static int arcam_av_read_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long *value)
+static int cec_read_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long *value)
 {
-	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
-
-	switch(key) {
-	case ARCAM_AV_POWER:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.power = arcam_av->global->zone1.power;
-			*value = !(arcam_av->local.zone1.power == ARCAM_AV_POWER_STAND_BY);
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.power = arcam_av->global->zone2.power;
-			*value = !(arcam_av->local.zone2.power == ARCAM_AV_POWER_STAND_BY);
-			break;
-		}
-		break;
-
-	case ARCAM_AV_VOLUME_SET:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.volume = arcam_av->global->zone1.volume;
-			*value = MID(0, arcam_av->local.zone1.volume - ARCAM_AV_VOLUME_MIN, 100);
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.volume = arcam_av->global->zone2.volume;
-			*value = MID(20, arcam_av->local.zone2.volume - ARCAM_AV_VOLUME_MIN, 83);
-			break;
-		}
-		break;
-
-	case ARCAM_AV_MUTE:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.mute = arcam_av->global->zone1.mute;
-			*value = !(arcam_av->local.zone1.mute == ARCAM_AV_MUTE_ON);
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.mute = arcam_av->global->zone2.mute;
-			*value = !(arcam_av->local.zone2.mute == ARCAM_AV_MUTE_ON);
-			break;
-		}
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
+	snd_ctl_cec_t *cec = ext->private_data;
+/*
+	*value = MID(0, 50 - ARCAM_AV_VOLUME_MIN, 100);
+*/
+	*value = 50;
 	return 0;
 }
 
-static int arcam_av_write_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long *value)
+static int cec_write_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long *value)
 {
-	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
-	unsigned char volume = ARCAM_AV_VOLUME_MIN;
+	snd_ctl_cec_t *cec = ext->private_data;
+	unsigned char volume = 50;
 
-	switch(key) {
-	case ARCAM_AV_POWER:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.power = ARCAM_AV_POWER_STAND_BY + *value;
-			if (arcam_av->global->zone1.power == arcam_av->local.zone1.power)
-				return 0;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.power = ARCAM_AV_POWER_STAND_BY + *value;
-			if (arcam_av->global->zone2.power == arcam_av->local.zone2.power)
-				return 0;
-			break;
-		}
-		break;
-
-	case ARCAM_AV_VOLUME_SET:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.volume = ARCAM_AV_VOLUME_MIN + *value;
-			if (arcam_av->global->zone1.volume == arcam_av->local.zone1.volume)
-				return 0;
-
-			if (arcam_av->global->zone1.mute == ARCAM_AV_MUTE_ON) {
-				arcam_av->global->zone1.volume = arcam_av->local.zone1.volume;
-				return 1;
-			}
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.volume = ARCAM_AV_VOLUME_MIN + *value;
-			if (arcam_av->global->zone2.volume == arcam_av->local.zone2.volume)
-				return 0;
-
-			if (arcam_av->global->zone2.mute == ARCAM_AV_MUTE_ON) {
-				arcam_av->global->zone2.volume = arcam_av->local.zone2.volume;
-				return 1;
-			}
-			break;
-		}
-		break;
-
-	case ARCAM_AV_MUTE:
-		switch(arcam_av->zone) {
-		case ARCAM_AV_ZONE1:
-			arcam_av->local.zone1.mute = ARCAM_AV_MUTE_ON + *value;
-			if (arcam_av->global->zone1.mute == arcam_av->local.zone1.mute)
-				return 0;
-
-			volume = arcam_av->global->zone1.volume;
-			break;
-
-		case ARCAM_AV_ZONE2:
-			arcam_av->local.zone2.mute = ARCAM_AV_MUTE_ON + *value;
-			if (arcam_av->global->zone2.mute == arcam_av->local.zone2.mute)
-				return 0;
-
-			volume = arcam_av->global->zone2.volume;
-			break;
-		}
-
-		if (*value)
-			arcam_av_send(arcam_av->port_fd, ARCAM_AV_VOLUME_SET, arcam_av->zone, volume);
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	if (!arcam_av_send(arcam_av->port_fd, key, arcam_av->zone, '0' + *value))
+//	if (arcam_av->global->zone1.volume == arcam_av->local.zone1.volume)
+//		return 0;
+//
+//	if (arcam_av->global->zone1.mute == ARCAM_AV_MUTE_ON)
+//	{
+//		arcam_av->global->zone1.volume = arcam_av->local.zone1.volume;
+//		return 1;
+//	}
+//	if (!arcam_av_send(arcam_av->port_fd, key, arcam_av->zone, '0' + *value))
 		return 1;
-	else
-		return -1;
+//	else
+//		return -1;
 }
 
+/*
 static int arcam_av_read_event(snd_ctl_ext_t *ext, snd_ctl_elem_id_t *id, unsigned int *event_mask)
 {
 	snd_ctl_arcam_av_t *arcam_av = ext->private_data;
@@ -402,9 +198,9 @@ static snd_ctl_ext_callback_t cec_ext_callback = {
 	.get_integer_info = cec_get_integer_info,
 //	.get_enumerated_info = arcam_av_get_enumerated_info,
 //	.get_enumerated_name = arcam_av_get_enumerated_name,
-//	.read_integer = arcam_av_read_integer,
+	.read_integer = cec_read_integer,
 //	.read_enumerated = arcam_av_read_enumerated,
-//	.write_integer = arcam_av_write_integer,
+	.write_integer = cec_write_integer,
 //	.write_enumerated = arcam_av_write_enumerated,
 //	.read_event = arcam_av_read_event,
 };
@@ -438,6 +234,8 @@ SND_CTL_PLUGIN_DEFINE_FUNC(cec)
 		err = -errno;
 		goto error;
 	}
+	//test, ob printfs beim aufrufen von amixer in die konsole kommen.
+	//printf("test\n");
 
 	cec = calloc(1, sizeof(*cec) + strlen(filename) + 1);
 
