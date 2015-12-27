@@ -35,7 +35,7 @@ static const char* cec_name =		"CEC";
 
 typedef struct snd_ctl_cec {
 	snd_ctl_ext_t		ext;
-//	int			port_fd;
+	int			port_fd;
 //	int			shm_id;
 //	const char*		port;
 //	pthread_t		server;
@@ -46,8 +46,9 @@ static void cec_close(snd_ctl_ext_t *ext)
 	snd_ctl_cec_t *cec = ext->private_data;
 
 	//close file
-	//if (cec->port_fd >= 0)
-	//	close(cec->port_fd);
+	printf("closing file\n");
+	if (cec->port_fd >= 0)
+		close(cec->port_fd);
 
 	free(cec);
 }
@@ -110,30 +111,38 @@ static int cec_get_integer_info(snd_ctl_ext_t *ext,
 static int cec_read_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long *value)
 {
 	snd_ctl_cec_t *cec = ext->private_data;
-/*
-	*value = MID(0, 50 - ARCAM_AV_VOLUME_MIN, 100);
-*/
-	*value = 50;
+	char buf[3];
+	int volume=0;
+//	printf("reading integer\n");
+	read(cec->port_fd,buf,2);
+	volume=atoi(buf);
+
+//	printf("read(buf): %s\n",buf);
+//	printf("read(int): %d\n",volume);
+
+	*value = volume;
 	return 0;
 }
 
 static int cec_write_integer(snd_ctl_ext_t *ext, snd_ctl_ext_key_t key, long *value)
 {
 	snd_ctl_cec_t *cec = ext->private_data;
-	unsigned char volume = 50;
-
-//	if (arcam_av->global->zone1.volume == arcam_av->local.zone1.volume)
-//		return 0;
-//
-//	if (arcam_av->global->zone1.mute == ARCAM_AV_MUTE_ON)
-//	{
-//		arcam_av->global->zone1.volume = arcam_av->local.zone1.volume;
-//		return 1;
-//	}
-//	if (!arcam_av_send(arcam_av->port_fd, key, arcam_av->zone, '0' + *value))
+	char buf[3];
+	printf("%d\n",*value);
+	sprintf(buf,"%d\n",*value);
+	printf("writing integer %d\n",buf);
+	//TODO: check value against current volume. not clear current volume from where? locally stored variable? in future polled from cec?
+	//TODO: rewind file?
+	if (write(cec->port_fd,buf,3)<0)
+	{
+		printf("error printing");
+		return -1;
+	} else
+	{
+		printf("no error printing, rewinding");
+		lseek(cec->port_fd,0,SEEK_SET);
 		return 1;
-//	else
-//		return -1;
+	}
 }
 
 /*
@@ -190,7 +199,7 @@ static int arcam_av_read_event(snd_ctl_ext_t *ext, snd_ctl_elem_id_t *id, unsign
 */
 
 static snd_ctl_ext_callback_t cec_ext_callback = {
-//	.close = arcam_av_close,
+	.close = cec_close,
 	.elem_count = cec_elem_count,
 	.elem_list = cec_elem_list,
 	.find_elem = cec_find_elem,
@@ -252,6 +261,13 @@ SND_CTL_PLUGIN_DEFINE_FUNC(cec)
 	cec->ext.callback = &cec_ext_callback;
 	cec->ext.private_data = cec;
 
+	printf("opening file\n");
+	cec->port_fd=open(filename,O_RDWR);
+	if (cec->port_fd<0)
+	{
+		err = -errno;
+		goto error;
+	}
 /*
 	arcam_av->shm_id = -1;
 	arcam_av->port_fd = -1;
