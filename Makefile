@@ -8,3 +8,7 @@ libasound_module_ctl_cec.so: ctl_cec.o
 
 install: libasound_module_ctl_cec.so
 	cp $< /usr/lib/alsa-lib/$<
+
+
+cec: cec_iface.c
+	gcc $< -lcec -o $@
