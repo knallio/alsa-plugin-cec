@@ -1,14 +1,17 @@
 #include "cec_iface.h"
 
+#include <unistd.h>
 
 static cec_iface_t g_cec_iface;
+
+static receiver_t g_receiver;
 
 static int cb_cec_command(void* lib, const cec_command command)
 {
 
 	printf("\ncommand received:\n");
 
-	if (command.destination!=1)
+	if (command.destination!=g_cec_iface.cec_adapter)
 	{
 		printf("not for me: %x\n",command.destination);
 		return 0;
@@ -23,7 +26,8 @@ static int cb_cec_command(void* lib, const cec_command command)
 	switch (command.opcode)
 	{
 		case CEC_OPCODE_REPORT_AUDIO_STATUS :
-			printf("got audio: %x\n",command.parameters.data[0]);
+			printf("audio status received: %x\n",command.parameters.data[0]);
+			g_receiver.volume=command.parameters.data[0];
 			break;
 		default:
 			printf("opcode: %x\n",command.opcode);
@@ -37,35 +41,33 @@ static int cb_cec_command(void* lib, const cec_command command)
 
 static int cb_cec_log_message(void* lib, const cec_log_message message)
 {
-	printf("test");
-  if ((message.level & g_cec_iface.cecLogLevel) == message.level)
-  {
-    const char* strLevel;
-    switch (message.level)
-    {
-    case CEC_LOG_ERROR:
-      strLevel = "ERROR:   ";
-      break;
-    case CEC_LOG_WARNING:
-      strLevel = "WARNING: ";
-      break;
-    case CEC_LOG_NOTICE:
-      strLevel = "NOTICE:  ";
-      break;
-    case CEC_LOG_TRAFFIC:
-      strLevel = "TRAFFIC: ";
-      break;
-    case CEC_LOG_DEBUG:
-      strLevel = "DEBUG:   ";
-      break;
-    default:
-      break;
-    }
+	if ((message.level & g_cec_iface.cecLogLevel) == message.level)
+	{
+		const char* strLevel;
+		switch (message.level)
+		{
+			case CEC_LOG_ERROR:
+				strLevel = "ERROR:   ";
+				break;
+			case CEC_LOG_WARNING:
+				strLevel = "WARNING: ";
+				break;
+			case CEC_LOG_NOTICE:
+				strLevel = "NOTICE:  ";
+				break;
+			case CEC_LOG_TRAFFIC:
+				strLevel = "TRAFFIC: ";
+				break;
+			case CEC_LOG_DEBUG:
+				strLevel = "DEBUG:   ";
+				break;
+			default:
+				break;
+		}
 
-    printf("%s[%16lld]\t%s\n", strLevel, message.time, message.message);
-  }
-
-  return 1;
+		printf("%s[%16lld]\t%s\n", strLevel, message.time, message.message);
+	}
+	return 1;
 }
 
 int cec_send_command(cec_opcode opcode, cec_datapacket parameter)
@@ -81,10 +83,10 @@ int cec_send_command(cec_opcode opcode, cec_datapacket parameter)
 //	int8_t              opcode_set;       /**< 1 when an opcode is set, 0 otherwise (POLL message) */
 //	int32_t             transmit_timeout; /**< the timeout to use in ms */
 
-	command.initiator=(cec_logical_address) 1;
+	command.initiator = g_cec_iface.cec_adapter;
 	command.destination = g_cec_iface.receiver;
 
-	command.opcode= opcode;
+	command.opcode = opcode;
 	command.opcode_set=1;
 	command.parameters=parameter;
 
@@ -96,7 +98,7 @@ int cec_send_command(cec_opcode opcode, cec_datapacket parameter)
 }
 
 
-int request_volume()
+int cec_request_volume()
 {
 	cec_opcode opcode=CEC_OPCODE_GIVE_AUDIO_STATUS;
 	cec_datapacket parameter = {{},0};
@@ -104,18 +106,25 @@ int request_volume()
 }
 
 
-int volume_up()
+int cec_volume_up()
 {
+	printf(" volume up\n");
 	cec_opcode opcode=CEC_OPCODE_USER_CONTROL_PRESSED;
 	cec_datapacket parameter = {{CEC_USER_CONTROL_CODE_VOLUME_UP},1};
 	cec_send_command(opcode,parameter);
 }
 
-int volume_down()
+int cec_volume_down()
 {
+	printf(" volume down\n");
 	cec_opcode opcode=CEC_OPCODE_USER_CONTROL_PRESSED;
 	cec_datapacket parameter = {{CEC_USER_CONTROL_CODE_VOLUME_DOWN},1};
 	cec_send_command(opcode,parameter);
+}
+
+int cec_mute()
+{
+	return 0;
 }
 
 
@@ -123,19 +132,19 @@ int cec_iface_init()
 {
 	g_cec_iface.strPort[0] = 0;
 	g_cec_iface.cecLogLevel = CEC_LOG_TRAFFIC;
+	//g_cec_iface.cecLogLevel = CEC_LOG_ALL;
 
-
-	//TODO: callbacks not working...
 	g_cec_iface.callbacks.CBCecLogMessage = cb_cec_log_message;
 	g_cec_iface.callbacks.CBCecCommand = cb_cec_command;
 
-	g_cec_iface.config.callbacks=&g_cec_iface.callbacks;
+	//g_cec_iface.config.callbacks=&g_cec_iface.callbacks;
 	g_cec_iface.receiver = 5;
 
-	g_cec_iface.cecLogLevel=CEC_LOG_ALL;
 	//set configuration:
 
 	libcec_clear_configuration(&(g_cec_iface.config));
+
+	g_cec_iface.config.callbacks=&g_cec_iface.callbacks;
 
 	g_cec_iface.config.clientVersion=LIBCEC_VERSION_CURRENT;
 	g_cec_iface.config.bActivateSource = 0;
@@ -164,6 +173,9 @@ int cec_iface_init()
 		strcpy(g_cec_iface.strPort, devices[0].comm);
 	}
 
+	printf("OPEN:\n");
+
+
 	if (!libcec_open(g_cec_iface.connection, g_cec_iface.strPort, 5000))
 	{
 		printf("unable to open the device on port %s\n", g_cec_iface.strPort);
@@ -171,7 +183,95 @@ int cec_iface_init()
 		return 1;
 	}
 
+	printf("INIT_SUCCESS\n");
 
+	cec_logical_addresses my_logical_addresses = libcec_get_logical_addresses(g_cec_iface.connection);
+	for (int i=0;i<16;i++)
+	{
+		if (my_logical_addresses.addresses[i]!=0)
+		{
+			g_cec_iface.cec_adapter=i;
+			break;
+		}
+	}
+
+	printf("My logical address: %d",g_cec_iface.cec_adapter);
+
+//	printf("wake0:%x\n",g_cec_iface.config.wakeDevices.addresses[0]);
+//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[1]);
+//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[2]);
+//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[3]);
+//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[4]);
+//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[5]);
+
+
+}
+
+
+
+/*public functions which can be called from ctl_cec*/
+int receiver_get_volume()
+{
+	return g_receiver.volume;
+}
+
+int receiver_set_volume(int volume)
+{
+	cec_request_volume();
+	sleep(1);	//90000 seems to be enough... no idea how robust...
+	int volume_diff=g_receiver.volume-volume;
+	printf("requested volume: %d, current volume: %d, volume difference: %d\n",volume,g_receiver.volume,volume_diff);
+
+	if (volume_diff>0)
+	{
+		for (int i=0;i<volume_diff;i++)
+		{
+			cec_volume_down();
+			sleep(1);
+		}
+	} else if (volume_diff<0)
+	{
+		for (int i=0;i<-volume_diff;i++)
+		{
+			sleep(1);
+			cec_volume_up();
+		}
+	}
+
+
+	cec_request_volume();
+	sleep(1);	//90000 seems to be enough... no idea how robust...
+	volume_diff=g_receiver.volume-volume;
+	printf("requested volume: %d, current volume: %d, volume difference: %d\n",volume,g_receiver.volume,volume_diff);
+
+
+	return 0;
+	while(volume_diff!=0)
+	{
+		cec_request_volume();
+		printf("requested volume: %d, current volume: %d, volume difference: %d\n",volume,g_receiver.volume,volume_diff);
+		if (volume_diff>0)
+		{
+			cec_volume_down();
+		} else if (volume_diff<0)
+		{
+			cec_volume_up();
+		}
+		//usleep(200000);
+		volume_diff=g_receiver.volume-volume;
+	}
+
+
+}
+
+int receiver_get_mute()
+{
+	return g_receiver.mute;
+
+}
+
+int receiver_set_mute()
+{
 
 }
 
@@ -182,13 +282,23 @@ int main(int argc, char *argv[])
 	cec_iface_init();
 
 
-	volume_down();
-	request_volume();
-//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[0]);
-//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[1]);
-//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[2]);
-//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[3]);
-//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[4]);
-//	printf("%x\n",g_cec_iface.config.wakeDevices.addresses[5]);
+//	cec_volume_down();
+//	cec_request_volume();
+
+
+	receiver_set_volume(50);
+
+//	printf("start waiting...");
+
+/*
+	while (1)
+	{
+		printf("waiting...\n");
+		cec_request_volume();
+		printf("receiver_volume: %d\n", g_receiver.volume);
+		sleep(1);
+	}
+
+*/
 	libcec_destroy(g_cec_iface.connection);
 }

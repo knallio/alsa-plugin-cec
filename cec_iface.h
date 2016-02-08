@@ -7,6 +7,7 @@ typedef struct cec_iface
 {
 	libcec_configuration	config;
 	libcec_connection_t	connection;
+	cec_logical_address	cec_adapter;
 	cec_logical_address	receiver;
 	char strPort[50];
 	int cecLogLevel;
@@ -14,7 +15,13 @@ typedef struct cec_iface
 
 } cec_iface_t;
 
+typedef struct receiver
+{
+	int volume;
+	int mute;
 
-static int cb_cec_log_message(void* lib, const cec_log_message message);
-static int cb_cec_command(void* lib, const cec_command command);
+} receiver_t;
+
+//static int cb_cec_log_message(void* lib, const cec_log_message message);
+//static int cb_cec_command(void* lib, const cec_command command);
 
